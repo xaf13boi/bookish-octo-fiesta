@@ -2,84 +2,110 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Neon Runner</title>
+<title>Neon Runner v2</title>
 <style>
 html, body {
   margin: 0;
   padding: 0;
   background: black;
   overflow: hidden;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
 }
 canvas {
   display: block;
   margin: auto;
   background: #111;
+  box-shadow: 0 0 20px cyan;
+}
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+}
+button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 20px;
+  font-size: 18px;
+  display: none;
 }
 </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
+<div id="ui">Score: 0 | Coins: 0</div>
+<button id="restart">Restart</button>
+<canvas id="game" width="600" height="300"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
 
-canvas.width = 600;
-canvas.height = 300;
+const lanes = [150, 250, 350];
+let lane = 1;
 
-let player = { x: 80, y: 220, w: 25, h: 25, dy: 0, jump: false };
-let gravity = 0.8;
+let player = { x: 100, y: lanes[lane], w: 30, h: 30 };
+
 let obstacles = [];
+let coins = [];
+
+let speed = 6;
 let score = 0;
+let coinCount = 0;
 let gameOver = false;
 
-document.addEventListener("keydown", e => {
-  if ((e.code === "Space" || e.code === "ArrowUp") && !player.jump) {
-    player.dy = -14;
-    player.jump = true;
-  }
+// INPUT
+function moveLeft(){ if(lane > 0) lane--; }
+function moveRight(){ if(lane < 2) lane++; }
+
+document.addEventListener("keydown", e=>{
+  if(e.code === "ArrowLeft") moveLeft();
+  if(e.code === "ArrowRight") moveRight();
 });
 
+// click/tap for Google Sites
+document.addEventListener("click", e=>{
+  if(e.clientX < window.innerWidth/2) moveLeft();
+  else moveRight();
+});
+
+// SPAWN
 function spawnObstacle(){
   obstacles.push({
-    x: canvas.width,
-    y: canvas.height - 40,
-    w: 20,
-    h: 40
+    x: 600,
+    y: lanes[Math.floor(Math.random()*3)],
+    w: 30,
+    h: 30
   });
 }
 
+function spawnCoin(){
+  coins.push({
+    x: 600,
+    y: lanes[Math.floor(Math.random()*3)],
+    r: 8
+  });
+}
+
+// LOOP
 function update(){
-  if(gameOver){
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    ctx.fillText("GAME OVER", 200, 130);
-    ctx.fillText("Score: " + score, 220, 170);
-    return;
-  }
+  ctx.fillStyle="#111";
+  ctx.fillRect(0,0,600,300);
 
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  player.y = lanes[lane];
 
-  player.y += player.dy;
-  player.dy += gravity;
-
-  if(player.y >= 220){
-    player.y = 220;
-    player.dy = 0;
-    player.jump = false;
-  }
-
-  ctx.fillStyle = "#00ffcc";
+  // PLAYER
+  ctx.fillStyle="cyan";
   ctx.fillRect(player.x, player.y, player.w, player.h);
 
-  for(let o of obstacles){
-    o.x -= 6;
-
-    ctx.fillStyle = "#ff0055";
-    ctx.fillRect(o.x, o.y, o.w, o.h);
+  // OBSTACLES
+  obstacles.forEach(o=>{
+    o.x -= speed;
+    ctx.fillStyle="red";
+    ctx.fillRect(o.x,o.y,o.w,o.h);
 
     if(player.x < o.x + o.w &&
        player.x + player.w > o.x &&
@@ -87,19 +113,50 @@ function update(){
        player.y + player.h > o.y){
       gameOver = true;
     }
-  }
+  });
 
-  obstacles = obstacles.filter(o => o.x > -20);
+  // COINS
+  coins.forEach(cn=>{
+    cn.x -= speed;
+    ctx.fillStyle="gold";
+    ctx.beginPath();
+    ctx.arc(cn.x, cn.y+15, cn.r, 0, Math.PI*2);
+    ctx.fill();
 
+    if(Math.abs(player.x - cn.x) < 20 &&
+       Math.abs(player.y - cn.y) < 20){
+      coinCount++;
+      cn.x = -100;
+    }
+  });
+
+  obstacles = obstacles.filter(o=>o.x>-50);
+  coins = coins.filter(c=>c.x>-50);
+
+  // SCORE
   score++;
-  ctx.fillStyle = "white";
-  ctx.font = "16px Arial";
-  ctx.fillText("Score: " + score, 10, 20);
+  speed += 0.002;
 
-  requestAnimationFrame(update);
+  document.getElementById("ui").innerText =
+    "Score: " + score + " | Coins: " + coinCount;
+
+  if(!gameOver){
+    requestAnimationFrame(update);
+  } else {
+    document.getElementById("restart").style.display = "block";
+  }
 }
 
+// RESTART
+document.getElementById("restart").onclick = ()=>{
+  location.reload();
+};
+
+// SPAWN LOOPS
 setInterval(spawnObstacle, 1200);
+setInterval(spawnCoin, 900);
+
+// START
 update();
 </script>
 
