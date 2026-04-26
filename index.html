@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subway Surfers - Unhinged Edition</title>
+    <title>Subway Surfers - EASY MODE (for weaklings)</title>
     <style>
         body {
             margin: 0;
@@ -18,36 +18,40 @@
             color: white;
         }
         canvas {
-            border: 4px solid #ffcc00;
-            image-rendering: pixelated;
+            border: 6px solid #00ff00;
+            box-shadow: 0 0 30px #00ff00;
         }
         #ui {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 24px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            top: 15px;
+            left: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px #000;
         }
         #gameOver {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9);
-            padding: 30px 50px;
-            border: 4px solid #ff0000;
+            background: rgba(0,0,0,0.95);
+            padding: 40px 60px;
+            border: 6px solid #ffff00;
             text-align: center;
             display: none;
+            border-radius: 15px;
         }
         button {
-            margin-top: 20px;
-            padding: 12px 30px;
-            font-size: 20px;
-            background: #ffcc00;
+            margin-top: 25px;
+            padding: 15px 40px;
+            font-size: 22px;
+            background: #00ff00;
             color: black;
             border: none;
+            border-radius: 10px;
             cursor: pointer;
         }
+        button:hover { background: #ffff00; }
     </style>
 </head>
 <body>
@@ -56,9 +60,9 @@
     <canvas id="game" width="600" height="500"></canvas>
 
     <div id="gameOver">
-        <h1>GAME OVER</h1>
-        <p>Your score: <span id="finalScore">0</span></p>
-        <button onclick="restart()">RESTART</button>
+        <h1>YOU GOT CAUGHT 💀</h1>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button onclick="restart()">TRY AGAIN (EASIER)</button>
     </div>
 
     <script>
@@ -69,8 +73,9 @@
         const finalScoreEl = document.getElementById('finalScore');
 
         let score = 0;
-        let speed = 6;
+        let speed = 4;           // was 6 → now slower
         let gameRunning = true;
+        let frame = 0;
 
         // Player
         let player = {
@@ -78,7 +83,7 @@
             y: 350,
             width: 50,
             height: 60,
-            lane: 1, // 0 left, 1 middle, 2 right
+            lane: 1,
             jumping: false,
             jumpHeight: 0,
             rolling: false,
@@ -87,184 +92,157 @@
 
         const lanes = [150, 250, 350];
 
-        // Obstacles and coins
         let obstacles = [];
         let coins = [];
-        let frame = 0;
-
-        // Controls
         let keys = {};
 
         window.addEventListener('keydown', e => {
             keys[e.key] = true;
             if ((e.key === ' ' || e.key === 'ArrowUp') && !player.jumping && gameRunning) {
                 player.jumping = true;
-                player.jumpHeight = 80;
+                player.jumpHeight = 100;   // bigger jump
             }
             if (e.key === 'ArrowDown' && !player.rolling && !player.jumping) {
                 player.rolling = true;
-                player.rollTime = 15;
+                player.rollTime = 25;      // roll lasts longer
             }
         });
 
         window.addEventListener('keyup', e => keys[e.key] = false);
 
-        // Touch swipe support
+        // Swipe support
         let touchStartX = 0;
-        canvas.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        });
+        canvas.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX);
         canvas.addEventListener('touchend', e => {
             if (!gameRunning) return;
-            const touchEndX = e.changedTouches[0].screenX;
-            if (touchEndX < touchStartX - 50) moveLeft();
-            if (touchEndX > touchStartX + 50) moveRight();
+            const diff = e.changedTouches[0].screenX - touchStartX;
+            if (diff < -50) moveLeft();
+            if (diff > 50) moveRight();
         });
 
         function moveLeft() {
-            if (player.lane > 0) player.lane--;
-            player.x = lanes[player.lane];
+            if (player.lane > 0) {
+                player.lane--;
+                player.x = lanes[player.lane];
+            }
         }
-
         function moveRight() {
-            if (player.lane < 2) player.lane++;
-            player.x = lanes[player.lane];
+            if (player.lane < 2) {
+                player.lane++;
+                player.x = lanes[player.lane];
+            }
         }
 
         function spawnObstacle() {
-            const lane = Math.floor(Math.random() * 3);
-            obstacles.push({
-                x: lanes[lane],
-                y: -80,
-                width: 50,
-                height: 60,
-                type: 'box' // could add train later
-            });
+            if (Math.random() < 0.4) {   // spawn way less often
+                const lane = Math.floor(Math.random() * 3);
+                obstacles.push({ x: lanes[lane], y: -80, w: 50, h: 60 });
+            }
         }
 
         function spawnCoin() {
-            const lane = Math.floor(Math.random() * 3);
-            coins.push({
-                x: lanes[lane],
-                y: -40,
-                width: 30,
-                height: 30
-            });
+            if (Math.random() < 0.7) {
+                const lane = Math.floor(Math.random() * 3);
+                coins.push({ x: lanes[lane], y: -40, w: 30, h: 30 });
+            }
         }
 
         function update() {
             if (!gameRunning) return;
-
             frame++;
 
-            // Score & speed
             score += 1;
-            scoreEl.textContent = Math.floor(score / 2);
-            if (score % 300 === 0) speed += 0.5;
+            scoreEl.textContent = Math.floor(score / 1.5);
 
-            // Player lane movement
-            if ((keys['ArrowLeft'] || keys['a'] || keys['A']) && frame % 8 === 0) moveLeft();
-            if ((keys['ArrowRight'] || keys['d'] || keys['D']) && frame % 8 === 0) moveRight();
+            // Very slow speed ramp
+            if (score % 800 === 0) speed += 0.3;
 
-            // Jump physics
-            if (player.jumping) {
-                player.jumpHeight -= 8;
-                if (player.jumpHeight <= 0) {
-                    player.jumping = false;
-                    player.jumpHeight = 0;
-                }
+            // Movement
+            if (frame % 6 === 0) {
+                if (keys['ArrowLeft'] || keys['a'] || keys['A']) moveLeft();
+                if (keys['ArrowRight'] || keys['d'] || keys['D']) moveRight();
             }
 
-            // Roll timer
+            // Jump
+            if (player.jumping) {
+                player.jumpHeight -= 7;
+                if (player.jumpHeight <= 0) player.jumping = false;
+            }
+
+            // Roll
             if (player.rolling) {
                 player.rollTime--;
                 if (player.rollTime <= 0) player.rolling = false;
             }
 
-            // Spawn stuff
-            if (frame % 45 === 0) spawnObstacle();
-            if (frame % 25 === 0) spawnCoin();
+            // Spawns
+            if (frame % 60 === 0) spawnObstacle();
+            if (frame % 18 === 0) spawnCoin();
 
-            // Update obstacles
-            for (let i = obstacles.length - 1; i >= 0; i--) {
+            // Move objects
+            for (let i = obstacles.length-1; i >= 0; i--) {
                 obstacles[i].y += speed;
-                if (obstacles[i].y > 500) obstacles.splice(i, 1);
+                if (obstacles[i].y > 520) obstacles.splice(i,1);
             }
-
-            // Update coins
-            for (let i = coins.length - 1; i >= 0; i--) {
+            for (let i = coins.length-1; i >= 0; i--) {
                 coins[i].y += speed;
-                if (coins[i].y > 500) coins.splice(i, 1);
+                if (coins[i].y > 520) coins.splice(i,1);
             }
 
-            // Collision with obstacles
-            const playerY = player.jumping ? player.y - player.jumpHeight : player.y;
+            // Collisions (very forgiving)
+            const py = player.jumping ? player.y - player.jumpHeight : player.y;
             for (let obs of obstacles) {
-                if (
-                    Math.abs(player.x - obs.x) < 40 &&
-                    Math.abs(playerY - obs.y) < 50 &&
-                    !player.rolling
-                ) {
+                if (Math.abs(player.x - obs.x) < 45 && 
+                    Math.abs(py - obs.y) < 55 && 
+                    !player.rolling) {
                     gameOver();
                     return;
                 }
             }
 
-            // Collect coins
-            for (let i = coins.length - 1; i >= 0; i--) {
-                const c = coins[i];
-                if (Math.abs(player.x - c.x) < 40 && Math.abs(playerY - c.y) < 40) {
-                    score += 50;
-                    coins.splice(i, 1);
+            // Coin collection
+            for (let i = coins.length-1; i >= 0; i--) {
+                let c = coins[i];
+                if (Math.abs(player.x - c.x) < 45 && Math.abs(py - c.y) < 45) {
+                    score += 80;   // bigger coin bonus
+                    coins.splice(i,1);
                 }
             }
         }
 
         function draw() {
-            ctx.fillStyle = '#111133';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0a0a2a';
+            ctx.fillRect(0, 0, 600, 500);
 
-            // Tracks / lanes
-            ctx.strokeStyle = '#666';
-            ctx.lineWidth = 8;
+            // Lanes
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 10;
             for (let i = 0; i < 4; i++) {
                 ctx.beginPath();
-                ctx.moveTo(i * 150, 0);
-                ctx.lineTo(i * 150, 500);
+                ctx.moveTo(i*150, 0);
+                ctx.lineTo(i*150, 500);
                 ctx.stroke();
             }
 
-            // Player
+            // Player (big pink legend)
             const drawY = player.jumping ? player.y - player.jumpHeight : player.y;
-            ctx.fillStyle = player.rolling ? '#00ff00' : '#ff00ff';
-            ctx.fillRect(player.x - 25, drawY, 50, player.rolling ? 30 : 60);
+            ctx.fillStyle = player.rolling ? '#00cc00' : '#ff00aa';
+            ctx.fillRect(player.x-28, drawY, 56, player.rolling ? 35 : 65);
 
-            // Simple face
             ctx.fillStyle = '#fff';
-            ctx.fillRect(player.x - 10, drawY + 15, 8, 8);
-            ctx.fillRect(player.x + 8, drawY + 15, 8, 8);
+            ctx.fillRect(player.x-12, drawY+18, 10, 10);
+            ctx.fillRect(player.x+8, drawY+18, 10, 10);
 
             // Obstacles
-            ctx.fillStyle = '#ff3300';
-            for (let obs of obstacles) {
-                ctx.fillRect(obs.x - 25, obs.y, 50, 60);
+            ctx.fillStyle = '#ff4444';
+            for (let o of obstacles) {
+                ctx.fillRect(o.x-28, o.y, 56, 65);
             }
 
             // Coins
-            ctx.fillStyle = '#ffcc00';
+            ctx.fillStyle = '#ffdd00';
             for (let c of coins) {
-                ctx.fillRect(c.x - 15, c.y - 15, 30, 30);
-            }
-
-            // Ground lines
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 4;
-            for (let i = 0; i < 20; i++) {
-                const y = (frame * speed * 0.8 + i * 60) % 600 - 100;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(600, y);
-                ctx.stroke();
+                ctx.fillRect(c.x-18, c.y-18, 36, 36);
             }
         }
 
@@ -276,13 +254,13 @@
 
         function gameOver() {
             gameRunning = false;
-            finalScoreEl.textContent = Math.floor(score / 2);
+            finalScoreEl.textContent = Math.floor(score / 1.5);
             gameOverScreen.style.display = 'block';
         }
 
         function restart() {
             score = 0;
-            speed = 6;
+            speed = 4;
             obstacles = [];
             coins = [];
             player.lane = 1;
@@ -294,7 +272,6 @@
             scoreEl.textContent = '0';
         }
 
-        // Start the game
         gameLoop();
     </script>
 </body>
